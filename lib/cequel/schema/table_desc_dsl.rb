@@ -149,8 +149,9 @@ module Cequel
       # Indicates that this is a materialized view.
       #
       # @return [void]
+      #
       def materialized_view
-        self.is_view = true
+        @is_view = true
       end
 
       def table

@@ -26,7 +26,9 @@ module Cequel
         # @return (see #read)
         #
         def read(keyspace, table_name)
-          table_data = fetch_raw_keyspace(keyspace).table(table_name.to_s)
+          keyspace = fetch_raw_keyspace(keyspace)
+          table_data = keyspace.table(table_name.to_s)
+          table_data = keyspace.materialized_view(table_name.to_s) if table_data.blank?
           (fail NoSuchTableError) if table_data.blank?
 
           new(table_data).call

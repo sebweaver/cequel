@@ -84,16 +84,13 @@ module Cequel
 
           patch =
             begin
-              existing_table_descriptor = Cequel::Schema::TableReader.read(connection,
-                                                                           table_name)
+              table_descriptor = Cequel::Schema::TableReader.read(connection, table_name)
+              return if table_descriptor.materialized_view?
 
-              return if existing_table_descriptor.materialized_view?
-
-              Cequel::Schema::TableDiffer.new(existing_table_descriptor,
-                                              table_schema)
-                .call
-
+              Cequel::Schema::TableDiffer.new(table_descriptor, table_schema).call
             rescue NoSuchTableError
+              return if table_schema.materialized_view?
+
               Cequel::Schema::TableWriter.new(table_schema)
             end
 
@@ -117,6 +114,14 @@ module Cequel
         #
         def table_schema
           dsl.table
+        end
+
+        #
+        # @return [Boolean] whether the table is a materialized view
+        #   as specified in the class definition
+        #
+        def materialized_view
+          dsl.materialized_view
         end
 
         protected
