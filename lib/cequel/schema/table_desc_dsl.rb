@@ -154,15 +154,22 @@ module Cequel
         @is_view = true
       end
 
+      #
+      # Memoize the table definition to prevent any rebuild when the table
+      # schema is queried.
+      #
+      # @return [void]
+      #
+      def memoize_table!
+        @_tables ||= {}
+        @_tables[table_name] = build_table
+      end
+
       def table
-        Table.new(table_name, is_view).tap do |tab|
-          columns.each do |c|
-            tab.add_column c
-          end
-          properties.each do |p|
-            tab.add_property p
-          end
-          tab.compact_storage = is_compact_storage
+        if @_tables&.key?(table_name)
+          @_tables[table_name]
+        else
+          build_table
         end
       end
 
@@ -171,6 +178,19 @@ module Cequel
       attr_reader :table_name, :columns, :properties, :is_compact_storage,
                   :is_view
 
+      def build_table
+        Table.new(table_name, is_view).tap do |tab|
+          columns.each do |c|
+            tab.add_column c
+          end
+
+          properties.each do |p|
+            tab.add_property p
+          end
+
+          tab.compact_storage = is_compact_storage
+        end
+      end
 
       def has_partition_key?
         columns.any?{|c| c.partition_key? }

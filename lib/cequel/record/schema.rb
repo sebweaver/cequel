@@ -124,6 +124,14 @@ module Cequel
           dsl.materialized_view
         end
 
+        #
+        # @return [void] cache the current table schema
+        #   specified in the class definition
+        #
+        def cache_schema!
+          dsl.memoize_table!
+        end
+
         protected
 
         def dsl
