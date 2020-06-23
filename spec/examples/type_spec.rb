@@ -134,6 +134,36 @@ describe Cequel::Type do
     end
   end
 
+  describe 'smallint' do
+    subject { Cequel::Type[:smallint] }
+    its(:cql_name) { should == :smallint }
+    its(:internal_name) {
+      should == 'org.apache.cassandra.db.marshal.ShortType' }
+
+    describe '#cast' do
+      specify { expect(subject.cast(1)).to eql(1) }
+      specify { expect(subject.cast('1')).to eql(1) }
+      specify { expect(subject.cast(1.0)).to eql(1) }
+      specify { expect(subject.cast(1.0.to_r)).to eql(1) }
+      specify { expect(subject.cast(BigDecimal('1.0'))).to eql(1) }
+    end
+  end
+
+  describe 'tinyint' do
+    subject { Cequel::Type[:tinyint] }
+    its(:cql_name) { should == :tinyint }
+    its(:internal_name) {
+      should == 'org.apache.cassandra.db.marshal.ByteType' }
+
+    describe '#cast' do
+      specify { expect(subject.cast(1)).to eql(1) }
+      specify { expect(subject.cast('1')).to eql(1) }
+      specify { expect(subject.cast(1.0)).to eql(1) }
+      specify { expect(subject.cast(1.0.to_r)).to eql(1) }
+      specify { expect(subject.cast(BigDecimal('1.0'))).to eql(1) }
+    end
+  end
+
   describe 'text' do
     subject { Cequel::Type[:text] }
     its(:cql_name) { should == :text }
