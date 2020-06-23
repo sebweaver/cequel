@@ -641,23 +641,24 @@ module Cequel
       #
       # @see #find_each_row
       # @see #find_in_batches
+      # @see https://docs.datastax.com/en/developer/ruby-driver/3.2/features/basics/result_paging/
       #
       def find_rows_in_batches(options = {}, &block)
-        return find_rows_in_single_batch(options, &block) if row_limit
-        options.assert_valid_keys(:batch_size)
-        batch_size = options.fetch(:batch_size, 1000)
-        batch_record_set = base_record_set = limit(batch_size)
-        more_results = true
+        if row_limit || query_page_size || attributes.key?(:query_paging_state)
+          return find_rows_in_single_batch(options, &block)
+        end
 
-        while more_results
-          rows = batch_record_set.find_rows_in_single_batch
-          yield rows if rows.any?
-          more_results = rows.length == batch_size
-          last_row = rows.last
-          if more_results
-            find_nested_batches_from(last_row, options, &block)
-            batch_record_set = base_record_set.next_batch_from(last_row)
+        options.assert_valid_keys(:batch_size)
+        batch_size = options.fetch(:batch_size, 1_000)
+        result = page_size(batch_size).data_set.results
+
+        Kernel.loop do
+          if result.rows.any?
+            yield result.rows.map { |row| Cequel::Metal::Row.from_result_row(row) }
           end
+
+          break if result.last_page?
+          result = result.next_page
         end
       end
 
@@ -748,23 +749,6 @@ module Cequel
                    :allow_filtering
 
       protected
-
-      def next_batch_from(row)
-        range_key_value = row[range_key_name]
-        if ascends_by?(range_key_column)
-          after(range_key_value)
-        else
-          before(range_key_value)
-        end
-      end
-
-      def find_nested_batches_from(row, options, &block)
-        return unless next_range_key_column
-
-        without_bounds_on(range_key_column)[row[range_key_name]]
-          .next_batch_from(row)
-          .find_rows_in_batches(options, &block)
-      end
 
       # @return [RecordSet] self but without any bounds conditions on
       # the specified column.
