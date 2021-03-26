@@ -139,6 +139,8 @@ module Cequel
         end
 
         def key(name, type, options = {})
+          return if dsl.column?(name)
+
           super
           if options[:partition]
             dsl.partition_key(name, type)
@@ -148,21 +150,29 @@ module Cequel
         end
 
         def column(name, type, options = {})
+          return if dsl.column?(name)
+
           super
           dsl.column(name, type, options)
         end
 
         def list(name, type, options = {})
+          return if dsl.column?(name)
+
           super
           dsl.list(name, type)
         end
 
         def set(name, type, options = {})
+          return if dsl.column?(name)
+
           super
           dsl.set(name, type)
         end
 
         def map(name, key_type, value_type, options = {})
+          return if dsl.column?(name)
+
           super
           dsl.map(name, key_type, value_type)
         end

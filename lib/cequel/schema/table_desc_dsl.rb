@@ -31,7 +31,7 @@ module Cequel
       # table_name - The name of the table being described.
       protected def initialize(table_name)
         @table_name = table_name
-        @columns = []
+        @columns = {}
         @properties = []
         @is_compact_storage = false
         @is_view = false
@@ -55,7 +55,7 @@ module Cequel
       #   See `Cequel::Type`.
       #
       def partition_key(name, type)
-        columns <<  PartitionKey.new(name, type(type))
+        columns[name] ||= PartitionKey.new(name, type(type))
       end
 
 
@@ -68,13 +68,16 @@ module Cequel
       #   keys. Leave nil for partition keys.
       #
       def key(name, type, clustering_order = nil)
-        columns << if has_partition_key?
-                     ClusteringColumn.new(name, type(type), clustering_order)
-                   else
-                     (fail ArgumentError, "Can't set clustering order for partition key #{name}") if clustering_order
+        columns[name] ||=
+          if has_partition_key?
+            ClusteringColumn.new(name, type(type), clustering_order)
+          else
+            if clustering_order
+              fail ArgumentError, "Can't set clustering order for partition key #{name}"
+            end
 
-                     PartitionKey.new(name, type(type))
-                   end
+            PartitionKey.new(name, type(type))
+          end
       end
 
       # Describe a column of the table
@@ -87,8 +90,8 @@ module Cequel
       #     `true` to infer an index name by convention
       #
       def column(name, type, options = {})
-        columns << DataColumn.new(name, type(type),
-                                  figure_index_name(name, options.fetch(:index, nil)))
+        columns[name] ||=
+          DataColumn.new(name, type(type), figure_index_name(name, options.fetch(:index, nil)))
       end
 
       # Describe a column of type list.
@@ -98,7 +101,7 @@ module Cequel
       #   `Cequel::Type` or a symbol. See `Cequel::Type`.
       #
       def list(name, type)
-        columns << List.new(name, type(type))
+        columns[name] ||= List.new(name, type(type))
       end
 
       # Describe a column of type set.
@@ -108,7 +111,7 @@ module Cequel
       #  `Cequel::Type` or a symbol. See `Cequel::Type`.
       #
       def set(name, type)
-        columns << Set.new(name, type(type))
+        columns[name] ||= Set.new(name, type(type))
       end
 
       # Describe a column of type map.
@@ -119,7 +122,7 @@ module Cequel
       # value_type - The type of the values of this column. Either a
       #   `Cequel::Type` or a symbol. See `Cequel::Type`.
       def map(name, key_type, value_type)
-        columns << Map.new(name, type(key_type), type(value_type))
+        columns[name] ||= Map.new(name, type(key_type), type(value_type))
       end
 
       # Describe property of the table.
@@ -173,6 +176,10 @@ module Cequel
         end
       end
 
+      def column?(name)
+        columns.key?(name)
+      end
+
       protected
 
       attr_reader :table_name, :columns, :properties, :is_compact_storage,
@@ -180,7 +187,7 @@ module Cequel
 
       def build_table
         Table.new(table_name, is_view).tap do |tab|
-          columns.each do |c|
+          columns.each_value do |c|
             tab.add_column c
           end
 
@@ -193,7 +200,7 @@ module Cequel
       end
 
       def has_partition_key?
-        columns.any?{|c| c.partition_key? }
+        columns.values.any? { |c| c.partition_key? }
       end
 
       def type(type)

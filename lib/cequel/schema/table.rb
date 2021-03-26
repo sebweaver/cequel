@@ -58,6 +58,8 @@ module Cequel
       #   ClusteringColumn, DataColumn, List, Set, or Map.
       #
       def add_column(column_desc)
+        return if columns_by_name.key?(column_desc.name)
+
         column_flavor = case column_desc
                         when PartitionKey
                           @partition_key_columns
